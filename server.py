@@ -1,5 +1,7 @@
 import asyncio
 import os
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager, suppress
 
 from dotenv import load_dotenv
 from mcp.server import MCPServer
@@ -25,12 +27,23 @@ poller = TelegramPoller(
 )
 
 
-poller_task = None
+@asynccontextmanager
+async def app_lifespan(_: MCPServer) -> AsyncIterator[None]:
+    poller_task = asyncio.create_task(poller.run())
+
+    try:
+        yield
+    finally:
+        poller_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await poller_task
+        await telegram.close()
 
 
 mcp = MCPServer(
     "Telegram MCP Bridge",
     version="0.1.0",
+    lifespan=app_lifespan,
 )
 
 
@@ -85,19 +98,7 @@ async def get_recent_messages(
     )
 
 
-async def start_background_tasks():
-    global poller_task
-
-    poller_task = asyncio.create_task(
-        poller.run()
-    )
-
-
 if __name__ == "__main__":
-    asyncio.run(
-        start_background_tasks()
-    )
-
     mcp.run(
         transport="stdio"
     )

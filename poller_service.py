@@ -1,7 +1,11 @@
 import asyncio
+import logging
 
 from storage import MessageStorage
 from telegram_client import TelegramClient
+
+
+logger = logging.getLogger(__name__)
 
 
 def normalize_message(message: dict) -> dict:
@@ -54,8 +58,10 @@ class TelegramPoller:
                     normalized
                 )
 
-                print(
-                    f"Stored: {normalized['text']}"
+                logger.info(
+                    "Stored Telegram message %s from chat %s",
+                    normalized["message_id"],
+                    normalized["chat_id"],
                 )
 
             await asyncio.sleep(0.1)
